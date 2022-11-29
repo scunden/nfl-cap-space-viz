@@ -53,6 +53,23 @@ def scrape_team_details(soup, year, team):
     data.update({'Team':[team],'Year':[year]})
     return pd.DataFrame(data= data)
 
+def classify_positions(df):
+    off = ['LT', 'WR', 'RT',  'G', 'RB', 'QB', 'C', 'TE', 'T', 'FB','OL']
+
+    df['Position Level 1'] = np.where(df['Pos.'].isin(off),"Offense","Defense & ST")
+    df['Position Level 2'] = np.where(df['Pos.'].isin(['LT','RT','OL','C','G','T']),"OL",df['Pos.'])
+    df['Position Level 2'] = np.where(df['Pos.'].isin(['RB','FB']),"HB",df['Position Level 2'])
+    df['Position Level 2'] = np.where(df['Pos.'].isin(['CB','SS','S','FS']),"DB",df['Position Level 2'])
+    df['Position Level 2'] = np.where(df['Pos.'].isin(['ILB','OLB','LB']),"LB",df['Position Level 2'])
+    df['Position Level 2'] = np.where(df['Pos.'].isin(['DE','DT']),"DL",df['Position Level 2'])
+    df['Position Level 2'] = np.where(df['Pos.'].isin(['K','P','LS']),"ST",df['Position Level 2'])
+
+    df.rename({'Pos.':'Position Level 3'}, axis=1, inplace=True)
+
+    df['Position Level 3'] = np.where(df['Position Level 3'].isin(['RT','LT','T']),"T",df['Position Level 3'])
+
+    return df
+
 def scrape_data():
     teams_url = get_teams_cap_url()
     player_details = pd.DataFrame()
@@ -76,6 +93,9 @@ def scrape_data():
                 team_details_23 = pd.concat([team_details_23, team_detail])
             else:
                 team_details_22 = pd.concat([team_details_22, team_detail])
+
+    player_details = classify_positions(player_details)  
+    player_details = player_details.loc[~player_details['Player Name'].str.contains('Active Roster')]
 
     return player_details, team_details_22, team_details_23
 
